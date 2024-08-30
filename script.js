@@ -22,7 +22,7 @@ const addLine = () => {
 }
 
 addLine();
-inputs[0].value = "x=1";
+inputs[0].value = "2*x+3=7";
 
 document.addEventListener("keypress", (event) => {
 	if(event.key == "Enter" && event.shiftKey) {
@@ -124,7 +124,11 @@ const checkAllOps = (array) => {
 			found = processed.found;
 			node = processed.node;
 			if(found == false) {
-				return new ASTNode("operand", array);
+				if(isNum(array[0]) == true) {
+					return new ASTNode("operand_n", parseInt(array[0]));
+				} else {
+					return new ASTNode("operand_v", array[0]);
+				}
 			} else {
 				return new ASTNode("operation", node.value, node.left, node.right);
 			}
@@ -146,8 +150,46 @@ const processTokens = (tokens) => {
 	}
 };
 
+const simplifyAST = (AST) => {
+	let new_ast = AST;
+
+	if(AST.type == "operation") {
+		if(AST.value == "+") {
+			if(AST.left.type == "operand_n" && AST.right.type == "operand_n") {
+				new_ast = new ASTNode("operand_n", AST.left.value + AST.right.value);
+			}
+		} else if(AST.value == "*") {
+			if(AST.left.type == "operand_n" && AST.right.type == "operand_n") {
+				new_ast = new ASTNode("operand_n", AST.left.value * AST.right.value);
+			}
+		} else if(AST.value == "=") {
+			new_ast = new ASTNode("operation", "=", simplifyAST(AST.left), simplifyAST(AST.right));
+		}
+	}
+
+	return new_ast
+};
+
 const generateAST = (tokens) => {
-	console.log(JSON.stringify(processTokens(tokens)));
+	let starting_ast = processTokens(tokens);
+	let simplified = simplifyAST(starting_ast);
+
+	let equation = returnEquation(simplified);
+	console.log(equation);
+
+	return equation
+};
+
+const returnEquation = (AST) => {
+	let equation = "";
+	if(AST.type == "operand_n" || AST.type == "operand_v") {
+		return AST.value;
+	} else if(AST.type == "operation") {
+		let left = returnEquation(AST.left);
+		let right = returnEquation(AST.right);
+		equation = `${left} ${AST.value} ${right}`;
+		return equation
+	}
 };
 
 const change = (values) => {
