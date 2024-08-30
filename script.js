@@ -22,6 +22,7 @@ const addLine = () => {
 }
 
 addLine();
+inputs[0].value = "x=1";
 
 document.addEventListener("keypress", (event) => {
 	if(event.key == "Enter" && event.shiftKey) {
@@ -79,11 +80,15 @@ const generateTokens = (equation) => {
 };
 
 class ASTNode {
-	constructor(type, operation=null, left=null, right=null) {
+	constructor(type, value, left=null, right=null) {
 		this.type = type;
-		this.operation = operation;
-		this.left = left;
-		this.right = right;
+		this.value = value;
+		if(left != null) {
+			this.left = left;
+		}
+		if(right != null) {
+			this.right = right;
+		}
 	}
 }
 
@@ -98,20 +103,51 @@ const lookForOp = (operation, array) => {
 			(operation_found ? left : right).push(array[i]);
 		}
 	}
-	return {"left": left, "right": right, "found": operation_found};
+
+	if(operation_found == true) {
+		return {"found": true, "node": new ASTNode("operation", operation, left, right)};
+	} else {
+		return {"found": false, "node": array}
+	}
+};
+
+const checkAllOps = (array) => {
+	let processed = lookForOp("=", array);
+	let found = processed.found;
+	let node = processed.node;
+	if(found == false) {
+		processed = lookForOp("+", array);
+		found = processed.found;
+		node = processed.node;
+		if(found == false) {
+			processed = lookForOp("*", array);
+			found = processed.found;
+			node = processed.node;
+			if(found == false) {
+				return new ASTNode("operand", array);
+			} else {
+				return new ASTNode("operation", node.value, node.left, node.right);
+			}
+		} else {
+			return new ASTNode("operation", node.value, node.left, node.right);
+		}
+	} else {
+		// console.log(`Operation found: ${node.value}, 1`);
+		return new ASTNode("operation", node.value, node.left, node.right);
+	}
+};
+
+const processTokens = (tokens) => {
+	let AST = checkAllOps(tokens);
+	if(AST.type == "operation") {
+		return new ASTNode("operation", AST.value, processTokens(AST.left), processTokens(AST.right));
+	} else {
+		return AST;
+	}
 };
 
 const generateAST = (tokens) => {
-	// Split tokens into left and right.
-	let equalArr = lookForOp("=", tokens);
-	
-	let left_side = equalArr.left;
-	let right_side = equalArr.right;
-
-	let lookArr = lookForOp("+", left_side);
-	let found = lookArr.found;
-
-	console.log(`Left: ${JSON.stringify(lookArr)}`);
+	console.log(JSON.stringify(processTokens(tokens)));
 };
 
 const change = (values) => {
